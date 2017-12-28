@@ -98,31 +98,32 @@ def repeat_users():
     input_file = open('users.txt', 'w')     #overwrites text file to make it blank
     input_file.close()
     
-    
+bios = {}           #used for bio_scan()
+parsed_bios = {}    #used for bio_scan()    
 
 def bio_scan():
     """Takes list of users stored in a text file and scans the contents of their Imgur profiles for their bios"""
     print('Bio scan started at: ' + str(datetime.now()))
     input_file = open('UsersDict.txt', 'r')     #get users from file
     
-    bios = {}
-    parsed_bios = {}
+    
     for user in input_file:
+        if user.strip()[6:] in parsed_bios:     #checks if user has already been seen before
+            continue
+            
         imgur = 'https://www.imgur.com' + user.strip()      
         r = requests.get(imgur)
         html_content = r.text
         soup = BeautifulSoup(html_content, "html.parser")       #get contents from profile page
         
-        if user.strip()[6:] in parsed_bios:     #checks if user has already been seen before
-            pass
-        elif soup.find('div', {'id' : 'account-bio'}) == None:      #checks if user has a bio
+        if soup.find('div', {'id' : 'account-bio'}) == None:      #checks if user has a bio
             parsed_bios[user.strip()[6:]] = 'Parsed'
         else:                                   #if user has a bio and hasn't been seen then they are added to dictionary
             parsed_bios[user.strip()[6:]] = 'Parsed'
             bios[user.strip()[6:]] = soup.find('div', {'id' : 'account-bio'}).text
     
     for user in bios:       #prints bio for every user found in dictionary
-        if bios[user].find('front page') > -1 or bios[user].find('get it to the front page') > -1 or bios[user].find('get this to the front page') > -1 or bios[user].find('screenshot this') > -1:
+        if bios[user].find('front page') > -1 or bios[user].find('get it to the front page') > -1 or bios[user].find('get this to the front page') > -1 or bios[user].find('screenshot this') > -1:     #searches found bios for keywords
             print(user + ': \n' + bios[user] + '\n')
 
     input_file.close()
