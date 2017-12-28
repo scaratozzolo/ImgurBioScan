@@ -5,13 +5,16 @@ Created on Dec 27, 2017
 
 I pledge my honor that I have abided by the Stevens Honor System - scaratoz
 '''
-from imgur.galleryscan import gallery_scan
-from imgur.userscan import user_scan
+from galleryscan import gallery_scan
+from userscan import user_scan
 import requests
 from bs4 import BeautifulSoup
+import time
+from datetime import datetime
 
 
 def bio_scan():
+    print('Bio scan started at: ' + str(datetime.now()))
     input_file = open('users.txt', 'r')
     
     bios = {}
@@ -33,6 +36,12 @@ def bio_scan():
     input_file.close()
 
 
-gallery_scan()
-user_scan()
-bio_scan()
+
+print('Scanning started at: ' + str(datetime.now()))
+for i in range(1,101):
+    time.sleep(3600)
+    gallery_scan()
+    user_scan()
+    bio_scan()
+    print('Finished scan ' + str(i) + ' at: ' + str(datetime.now()) + '\n')
+print('Scanning finished at: ' + str(datetime.now()))

@@ -8,9 +8,12 @@ I pledge my honor that I have abided by the Stevens Honor System - scaratoz
 
 import requests
 from bs4 import BeautifulSoup
+from datetime import datetime
 
 #subs = ["https://www.imgur.com","https://imgur.com/t/The_More_You_Know", "https://imgur.com/t/Science_and_Tech", "https://imgur.com/t/Gaming"]
 def gallery_scan():
+    print('Gallery scan started at: ' + str(datetime.now()))
+    
     r = requests.get("https://www.imgur.com")
     html_content = r.text
     soup = BeautifulSoup(html_content, "html.parser")
