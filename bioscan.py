@@ -1,73 +1,77 @@
 '''
-Created on Dec 27, 2017
+Created on Dec 29, 2017
 
-@author: Scott Caratozzolo
-
-I pledge my honor that I have abided by the Stevens Honor System - scaratoz
+@author: Scott
 '''
-import requests
 from bs4 import BeautifulSoup
+import sys
+import urllib.request
+from PyQt5.QtWebEngineWidgets import QWebEnginePage
+from PyQt5.QtWidgets import QApplication
+from PyQt5.QtCore import QUrl
 import time
 from datetime import datetime
 
 
-#subs = ["https://www.imgur.com","https://imgur.com/t/The_More_You_Know", "https://imgur.com/t/Science_and_Tech", "https://imgur.com/t/Gaming"]
-def gallery_scan():
+class Page(QWebEnginePage):
+    def __init__(self, url):
+        self.app = QApplication(sys.argv)
+        QWebEnginePage.__init__(self)
+        self.html = ''
+        self.loadFinished.connect(self._on_load_finished)
+        self.load(QUrl(url))
+        self.app.exec_()
+
+    def _on_load_finished(self):
+        self.html = self.toHtml(self.Callable)
+#         print('Load finished')
+
+    def Callable(self, html_str):
+        self.html = html_str
+        self.app.quit()
+
+
+def scan():
     """Scans the front page of Imgur and pulls any href to a gallery image. Stores list of all images in a text file."""
     print('Gallery scan started at: ' + str(datetime.now()))
+
+    page_obj = {}   
+    page_obj['fp'] = Page('https://www.imgur.com')
+    soup = BeautifulSoup(page_obj['fp'].html, 'lxml')         #Get content from Imgur.com
     
-    r = requests.get("https://www.imgur.com")
-    html_content = r.text
-    soup = BeautifulSoup(html_content, "html.parser")   #Get content from Imgur.com
-    
-    users = ""
     gallery = ""
-    for link in soup.find_all('a'):     #checks all hrefs for a gallery link. also checks if there are any user links.
+    for link in soup.find_all('a', {'class':'image-list-link'}):     #checks all hrefs for a gallery link.
         text = link.get('href')
-        if text.find("/user") > -1:
-            users += text + '\n'
-        elif text.find("/gallery") > -1 and len(text) <= 16:
-            if text == "/gallery/custom" or text == '/gallery/random':
-                pass
-            else:
-                gallery += text + '\n'      
-              
-    output_file = open('users.txt', 'a')        #Store users in text file
-    output_file.write(users)
-    output_file.close()
-    
+        gallery += text + '\n'
+
     output_file = open('gallery.txt', 'w')      #Store gallery images in text file
     output_file.write(gallery)
     output_file.close()
-
-
-def user_scan():
+    
+    
+    
     """Scan all gallery images found in text file for Imgur users"""
     print('User scan started at: ' + str(datetime.now()))
     
+    users = ''
+
     input_file = open('gallery.txt', 'r')       #get gallery image links
-    
-    users = ""
     for line in input_file:
-        imgur = "https://www.imgur.com" + line.strip()      #get content from gallery image link
-        r = requests.get(imgur)
-        html_content = r.text
-        soup = BeautifulSoup(html_content, "html.parser")
-        for link in soup.find_all('a'):         #checks all hrefs for user links
-            text = str(link.get('href'))
-            if text.find("//imgur.com/user") > -1:
-                if text.find("https://imgur.com") > -1:
-                    pass
-                else:
-                    users += text[11:] + '\n'
+        page_obj[line] = Page('https://www.imgur.com' + line.strip())
     
+    for key in page_obj:
+        soup = BeautifulSoup(page_obj[key].html, 'html.parser')
+        for link in soup.find_all('a', {'class':'comment-username'}):
+            users += link.get('href') + '\n'
+            
     output_file = open('users.txt', 'a')        #writes users to text file
     output_file.write(users)
     output_file.close()
-
+    
     input_file.close()
-    repeat_users()      #calls function to remove duplicate or repat users
-
+    repeat_users()
+    
+   
 
 def repeat_users():
     """From a list of users pulled from text file, removes all repeat users and stores new list of users in new text file"""
@@ -98,44 +102,53 @@ def repeat_users():
     input_file = open('users.txt', 'w')     #overwrites text file to make it blank
     input_file.close()
     
+
+    
+profile_obj = {}
+parsed_obj = {}
 bios = {}           #used for bio_scan()
-parsed_bios = {}    #used for bio_scan()    
+parsed_bios = {}   
 
 def bio_scan():
     """Takes list of users stored in a text file and scans the contents of their Imgur profiles for their bios"""
     print('Bio scan started at: ' + str(datetime.now()))
+    
+    
     input_file = open('UsersDict.txt', 'r')     #get users from file
     
-    
     for user in input_file:
-        if user.strip()[6:] in parsed_bios:     #checks if user has already been seen before
+        if user in parsed_obj:
             continue
-            
-        imgur = 'https://www.imgur.com' + user.strip()      
-        r = requests.get(imgur)
-        html_content = r.text
-        soup = BeautifulSoup(html_content, "html.parser")       #get contents from profile page
+        else:
+            profile_obj[user] = Page('https://www.imgur.com' + user.strip())
+            parsed_obj[user] = 'Parsed'
+    
+    input_file.close()
+           
+    for username in profile_obj:
+        if username.strip()[6:] in parsed_bios:     #checks if user has already been seen before
+            continue
+     
+        soup = BeautifulSoup(profile_obj[username].html, 'lxml')        #get contents from profile page
         
         if soup.find('div', {'id' : 'account-bio'}) == None:      #checks if user has a bio
-            parsed_bios[user.strip()[6:]] = 'Parsed'
+            parsed_bios[username.strip()[6:]] = 'Parsed'
         else:                                   #if user has a bio and hasn't been seen then they are added to dictionary
-            parsed_bios[user.strip()[6:]] = 'Parsed'
-            bios[user.strip()[6:]] = soup.find('div', {'id' : 'account-bio'}).text
+            parsed_bios[username.strip()[6:]] = 'Parsed'
+            bios[username.strip()[6:]] = soup.find('div', {'id' : 'account-bio'}).text
     
     for user in bios:       #prints bio for every user found in dictionary
         if bios[user].find('front page') > -1 or bios[user].find('get it to the front page') > -1 or bios[user].find('get this to the front page') > -1 or bios[user].find('screenshot this') > -1:     #searches found bios for keywords
             print(user + ': \n' + bios[user] + '\n')
 
-    input_file.close()
+    
 
+if __name__ == '__main__':
 
-
-print('Scanning started at: ' + str(datetime.now()))    
-for i in range(1,101):  #run 100 times
-    time.sleep(3600)    #wait 1 hour before first operation
-    gallery_scan()      #performs gallery scan
-    user_scan()         #performs user scan
-    bio_scan()          #performs bio scan
-    print('Finished scan ' + str(i) + ' at: ' + str(datetime.now()) + '\n')
-print('Scanning finished at: ' + str(datetime.now()))
-
+    print('Scanning started at: ' + str(datetime.now()))    
+    for i in range(1,11):  #run 100 times
+        scan()              #performs gallery and user scans
+        bio_scan()          #performs bio scan
+        print('Finished scan ' + str(i) + ' at: ' + str(datetime.now()) + '\n')
+        time.sleep(3600)    #wait 1 hour before first operation
+    print('Scanning finished at: ' + str(datetime.now()))         
