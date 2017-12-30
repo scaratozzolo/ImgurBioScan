@@ -44,10 +44,13 @@ def scan():
     soup = BeautifulSoup(page_obj['fp'].html, 'lxml')         #Get content from Imgur.com
      
     gallery = ""
+    num_images = 0
     for link in soup.find_all('a', {'class':'image-list-link'}):     #checks all hrefs for a gallery link.
         text = link.get('href')
         gallery += text + '\n'
-        print(text + ' added')
+        
+        num_images += 1
+    print(str(num_images) + ' images added')
  
     output_file = open('gallery.txt', 'w')      #Store gallery images in text file
     output_file.write(gallery)
@@ -60,19 +63,29 @@ def scan():
     
     users = ''
 
+    num_pages = 0
     input_file = open('gallery.txt', 'r')       #get gallery image links
     for line in input_file:
         if line in page_obj:
             pass
         else:
             page_obj[line] = Page('https://www.imgur.com' + line.strip())
-            print(line.strip() + ' object created')
- 
+            
+        num_pages += 1
+        if num_pages % 10 == 0:
+            print(str(num_pages) + ' page objects created')         
+    print(str(num_pages) + ' total page objects loaded')
+    
+    num_users = 0
     for key in page_obj:
         soup = BeautifulSoup(page_obj[key].html, 'html.parser')
         for link in soup.find_all('a', {'class':'comment-username'}):
             users += link.get('href') + '\n'
-            print(users.strip() + ' added')
+            
+        num_users += 1
+        if num_users % 10 == 0:
+            print(str(num_users) + ' users added')        
+    print(str(num_users) + ' total users added')
             
     output_file = open('users.txt', 'a')        #writes users to text file
     output_file.write(users)
@@ -125,13 +138,18 @@ def bio_scan():
     
     input_file = open('UsersDict.txt', 'r')     #get users from file
     
+    num_pros = 0
     for user in input_file:
         if user in parsed_obj:
             continue
         else:
             profile_obj[user] = Page('https://www.imgur.com' + user.strip())
             parsed_obj[user] = 'Parsed'
-            print(user.strip() + ' profile parsed')
+            
+        num_pros += 1
+        if num_pros % 10 == 0:
+            print(str(num_pros) + ' profiles parsed')
+    print(str(num_pros) + ' total profiles parsed')
     
     input_file.close()
            
