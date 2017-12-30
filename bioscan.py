@@ -11,6 +11,8 @@ from PyQt5.QtWidgets import QApplication
 from PyQt5.QtCore import QUrl
 import time
 from datetime import datetime
+from _datetime import date
+from _tracemalloc import stop
 
 
 class Page(QWebEnginePage):
@@ -30,24 +32,27 @@ class Page(QWebEnginePage):
         self.html = html_str
         self.app.quit()
 
-
+page_obj = {}
 def scan():
     """Scans the front page of Imgur and pulls any href to a gallery image. Stores list of all images in a text file."""
     print('Gallery scan started at: ' + str(datetime.now()))
 
-    page_obj = {}   
+    #Todo: Pull top comment users from front page and pull image uploader from image
+
+   
     page_obj['fp'] = Page('https://www.imgur.com')
     soup = BeautifulSoup(page_obj['fp'].html, 'lxml')         #Get content from Imgur.com
-    
+     
     gallery = ""
     for link in soup.find_all('a', {'class':'image-list-link'}):     #checks all hrefs for a gallery link.
         text = link.get('href')
         gallery += text + '\n'
-
+        print(text + ' added')
+ 
     output_file = open('gallery.txt', 'w')      #Store gallery images in text file
     output_file.write(gallery)
     output_file.close()
-    
+     
     
     
     """Scan all gallery images found in text file for Imgur users"""
@@ -57,12 +62,17 @@ def scan():
 
     input_file = open('gallery.txt', 'r')       #get gallery image links
     for line in input_file:
-        page_obj[line] = Page('https://www.imgur.com' + line.strip())
-    
+        if line in page_obj:
+            pass
+        else:
+            page_obj[line] = Page('https://www.imgur.com' + line.strip())
+            print(line.strip() + ' object created')
+ 
     for key in page_obj:
         soup = BeautifulSoup(page_obj[key].html, 'html.parser')
         for link in soup.find_all('a', {'class':'comment-username'}):
             users += link.get('href') + '\n'
+            print(users.strip() + ' added')
             
     output_file = open('users.txt', 'a')        #writes users to text file
     output_file.write(users)
@@ -71,8 +81,6 @@ def scan():
     input_file.close()
     repeat_users()
     
-   
-
 def repeat_users():
     """From a list of users pulled from text file, removes all repeat users and stores new list of users in new text file"""
     print('Removing repeat users...')
@@ -102,16 +110,17 @@ def repeat_users():
     input_file = open('users.txt', 'w')     #overwrites text file to make it blank
     input_file.close()
     
+    print('Repeats removed...')  
 
-    
+
 profile_obj = {}
 parsed_obj = {}
 bios = {}           #used for bio_scan()
-parsed_bios = {}   
+parsed_bios = {} 
 
 def bio_scan():
     """Takes list of users stored in a text file and scans the contents of their Imgur profiles for their bios"""
-    print('Bio scan started at: ' + str(datetime.now()))
+    print('Bio scan started at: ' + str(datetime.now()) + '\n')
     
     
     input_file = open('UsersDict.txt', 'r')     #get users from file
@@ -122,6 +131,7 @@ def bio_scan():
         else:
             profile_obj[user] = Page('https://www.imgur.com' + user.strip())
             parsed_obj[user] = 'Parsed'
+            print(user.strip() + ' profile parsed')
     
     input_file.close()
            
@@ -140,15 +150,14 @@ def bio_scan():
     for user in bios:       #prints bio for every user found in dictionary
         if bios[user].find('front page') > -1 or bios[user].find('get it to the front page') > -1 or bios[user].find('get this to the front page') > -1 or bios[user].find('screenshot this') > -1:     #searches found bios for keywords
             print(user + ': \n' + bios[user] + '\n')
+            print('-' * 100)
 
-    
 
 if __name__ == '__main__':
-
-    print('Scanning started at: ' + str(datetime.now()))    
-    for i in range(1,11):  #run 100 times
-        scan()              #performs gallery and user scans
-        bio_scan()          #performs bio scan
+    print('Scanning started at: ' + str(datetime.now()))
+    for i in range(1,11):
+        scan()
+        bio_scan()
         print('Finished scan ' + str(i) + ' at: ' + str(datetime.now()) + '\n')
-        time.sleep(3600)    #wait 1 hour before first operation
-    print('Scanning finished at: ' + str(datetime.now()))         
+        #time.sleep(3600)
+    print('Scanning finished at: ' + str(datetime.now()))
