@@ -1,181 +1,232 @@
 '''
 Created on Dec 29, 2017
 
-@author: Scott
+@author: Scott Caratozzolo
+
+https://github.com/scaratozzolo/ImgurBioScan
 '''
-from bs4 import BeautifulSoup
-import sys
-import urllib.request
-from PyQt5.QtWebEngineWidgets import QWebEnginePage
-from PyQt5.QtWidgets import QApplication
-from PyQt5.QtCore import QUrl
+import os
 import time
+import pickle
 from datetime import datetime
-from _datetime import date
-from _tracemalloc import stop
+from bs4 import BeautifulSoup
+from selenium import webdriver
+from selenium.webdriver.common.keys import Keys
+from pathlib import Path
 
 
-class Page(QWebEnginePage):
-    def __init__(self, url):
-        self.app = QApplication(sys.argv)
-        QWebEnginePage.__init__(self)
-        self.html = ''
-        self.loadFinished.connect(self._on_load_finished)
-        self.load(QUrl(url))
-        self.app.exec_()
+browser = webdriver.Chrome('chromedriver.exe')
 
-    def _on_load_finished(self):
-        self.html = self.toHtml(self.Callable)
-#         print('Load finished')
 
-    def Callable(self, html_str):
-        self.html = html_str
-        self.app.quit()
+gallery = []
+users = []
 
-page_obj = {}
-def scan():
+def gallery_scan():
     """Scans the front page of Imgur and pulls any href to a gallery image. Stores list of all images in a text file."""
     print('Gallery scan started at: ' + str(datetime.now()))
-
-    #Todo: Pull top comment users from front page and pull image uploader from image
-
-   
-    page_obj['fp'] = Page('https://www.imgur.com')
-    soup = BeautifulSoup(page_obj['fp'].html, 'lxml')         #Get content from Imgur.com
-     
-    gallery = ""
-    num_images = 0
-    for link in soup.find_all('a', {'class':'image-list-link'}):     #checks all hrefs for a gallery link.
-        text = link.get('href')
-        gallery += text + '\n'
+    
+    global gallery
+    is_gallery = False
+    #Todo: save pickles during parsing, add way to check who has been added and who hasnt
+    
+    SAVED_GALLERY_PATH = Path('SaveData/saved-gallery.p')
+    if SAVED_GALLERY_PATH.is_file():
+        gallery = pickle.load(open('SaveData/saved-gallery.p', 'rb'))
+        is_gallery = True
         
-        num_images += 1
-    print(str(num_images) + ' images added')
- 
-    output_file = open('gallery.txt', 'w')      #Store gallery images in text file
-    output_file.write(gallery)
-    output_file.close()
-     
+    if is_gallery:
+        print(str(len(gallery)) + ' saved images loaded')
+    else:
+        browser.get('https://www.imgur.com')
+        elm = browser.find_element_by_tag_name('html')
+        for _ in range(5):
+            elm.send_keys(Keys.END)
+            time.sleep(1)
+        
+        soup = BeautifulSoup(browser.page_source, 'lxml')         #Get content from Imgur.com
+         
+        num_images = 0
+        for link in soup.find_all('a', {'class':'image-list-link'}):     #checks all hrefs for a gallery link.
+            text = link.get('href')
+            gallery.append(text.strip())
+            num_images += 1
+            
+        print(str(num_images) + ' images added')
     
+    pickle.dump(gallery, open('SaveData/saved-gallery.p', 'wb'))
+
     
+def user_scan():   
     """Scan all gallery images found in text file for Imgur users"""
     print('User scan started at: ' + str(datetime.now()))
     
-    users = ''
-
-    num_pages = 0
-    input_file = open('gallery.txt', 'r')       #get gallery image links
-    for line in input_file:
-        if line in page_obj:
-            pass
-        else:
-            page_obj[line] = Page('https://www.imgur.com' + line.strip())
-            
-        num_pages += 1
-        if num_pages % 10 == 0:
-            print(str(num_pages) + ' page objects created')         
-    print(str(num_pages) + ' total page objects loaded')
+    global users
     
-    num_users = 0
-    for key in page_obj:
-        soup = BeautifulSoup(page_obj[key].html, 'html.parser')
-        for link in soup.find_all('a', {'class':'comment-username'}):
-            users += link.get('href') + '\n'
+    SAVED_USERS_PATH = Path('SaveData/saved-users.p')
+    SAVED_LAST_IMAGE = Path('SaveData/last-image.p')
+    if SAVED_USERS_PATH.is_file():
+        users = pickle.load(open('SaveData/saved-users.p', 'rb'))
+        if SAVED_LAST_IMAGE.is_file():
+            last_image = pickle.load(open('SaveData/last-image.p', 'rb'))
+            if gallery.index(last_image) == len(gallery)-1:
+                print(str(len(users)) + ' saved users loaded')
+            else:
+                print(str(len(users)) + ' saved users loaded, picking up from where we left off...')
+                index = gallery.index(last_image)
+                num_images = len(gallery[:index])
+                for image in gallery[index:]:
+                    browser.get('https://www.imgur.com' + image)
+                    soup = BeautifulSoup(browser.page_source, 'lxml')
+                    
+                    for link in soup.find_all('a', {'class':'comment-username'}):
+                        text = link.get('href')
+                        users.append(text.strip())
+                    
+                    num_images += 1    
+                    if num_images % 100 == 0 and num_images != 0:
+                        print('\n' + str(num_images) + '/' + str(len(gallery)) + ' images parsed at ' + str(datetime.now()))
+                    elif num_images % 10 == 0:
+                        print(" . ", end="")
+                    pickle.dump(image, open('SaveData/last-image.p', 'wb'))
             
-        num_users += 1
-        if num_users % 10 == 0:
-            print(str(num_users) + ' users added')        
-    print(str(num_users) + ' total users added')
+                    pickle.dump(users, open('SaveData/saved-users.p', 'wb')) 
+        
+    else:
+        num_images = 0
+        for image in gallery:
+            browser.get('https://www.imgur.com' + image)
+            soup = BeautifulSoup(browser.page_source, 'lxml')
             
-    output_file = open('users.txt', 'a')        #writes users to text file
-    output_file.write(users)
-    output_file.close()
+            for link in soup.find_all('a', {'class':'comment-username'}):
+                text = link.get('href')
+                users.append(text.strip())
+            
+            num_images += 1    
+            if num_images % 100 == 0 and num_images != 0:
+                print('\n' + str(num_images) + '/' + str(len(gallery)) + ' images parsed at ' + str(datetime.now()))
+            elif num_images % 10 == 0:
+                print(" . ", end="")
+            pickle.dump(image, open('SaveData/last-image.p', 'wb'))
     
-    input_file.close()
+            pickle.dump(users, open('SaveData/saved-users.p', 'wb'))
+       
     repeat_users()
     
 def repeat_users():
     """From a list of users pulled from text file, removes all repeat users and stores new list of users in new text file"""
-    print('Removing repeat users...')
+    print('\nRemoving repeat users for ya...')
     
-    users = []
-    input_file = open('users.txt', 'r')         #Get users from first text file
-    input_file2 = open('UsersDict.txt', 'r')    #get users from second text file
+    global users
     
-    for line in input_file:     #adds users to list
-        users.append(line)
-        
-    for line2 in input_file2:   #adds users to list
-        users.append(line2)
-        
-    users = set(users)          #remove duplicate users
+    users = set(pickle.load(open('SaveData/saved-users.p', 'rb')))
     
-    input_file.close()
-    input_file2.close()
-    
-    output_file = open('UsersDict.txt', 'w')    #opens text file for writing
-    
-    for user in users:          #writes new list of individual users to text file
-        output_file.write(user)
-        
-    output_file.close()
-    
-    input_file = open('users.txt', 'w')     #overwrites text file to make it blank
-    input_file.close()
-    
-    print('Repeats removed...')  
+    print('All gone...')  
 
 
-profile_obj = {}
-parsed_obj = {}
 bios = {}           #used for bio_scan()
 parsed_bios = {} 
+
 
 def bio_scan():
     """Takes list of users stored in a text file and scans the contents of their Imgur profiles for their bios"""
     print('Bio scan started at: ' + str(datetime.now()) + '\n')
     
+    global bios
+    global parsed_bios
+    global users
     
-    input_file = open('UsersDict.txt', 'r')     #get users from file
+    SAVE_BIOS_PATH = Path("SaveData/bios.p")
+    SAVE_PARSED_BIOS = Path("SaveData/bios.p")
+    if SAVE_BIOS_PATH.is_file() and SAVE_PARSED_BIOS.is_file():
+        parsed_bios = pickle.load(open( "SaveData/parsed-bios.p", "rb" ))
+        bios = pickle.load(open( "SaveData/bios.p", "rb" ))
+        users = pickle.load(open('SaveData/saved-users.p', 'rb'))
     
+    num_users = len(users)
     num_pros = 0
-    for user in input_file:
-        if user in parsed_obj:
-            continue
-        else:
-            profile_obj[user] = Page('https://www.imgur.com' + user.strip())
-            parsed_obj[user] = 'Parsed'
-            
-        num_pros += 1
-        if num_pros % 10 == 0:
-            print(str(num_pros) + ' profiles parsed')
-    print(str(num_pros) + ' total profiles parsed')
-    
-    input_file.close()
            
-    for username in profile_obj:
+    for username in users:
         if username.strip()[6:] in parsed_bios:     #checks if user has already been seen before
             continue
-     
-        soup = BeautifulSoup(profile_obj[username].html, 'lxml')        #get contents from profile page
+        
+        browser.get('https://www.imgur.com' + username.strip())
+        soup = BeautifulSoup(browser.page_source, 'lxml')        #get contents from profile page
         
         if soup.find('div', {'id' : 'account-bio'}) == None:      #checks if user has a bio
             parsed_bios[username.strip()[6:]] = 'Parsed'
         else:                                   #if user has a bio and hasn't been seen then they are added to dictionary
             parsed_bios[username.strip()[6:]] = 'Parsed'
             bios[username.strip()[6:]] = soup.find('div', {'id' : 'account-bio'}).text
+        
+        num_pros += 1
+        if num_pros % 100 == 0 and num_pros != 0:
+            print('\n' + str(num_pros) + '/' + str(num_users) + ' profiles parsed at ' + str(datetime.now()))
+        elif num_pros % 10 == 0:
+            print(" . ", end="")
+        
+        pickle.dump(parsed_bios, open( "SaveData/parsed-bios.p", "wb" ))
+        pickle.dump(bios, open( "SaveData/bios.p", "wb" ))
+            
+    print('\n' + str(num_pros) + ' total profiles parsed')
     
     for user in bios:       #prints bio for every user found in dictionary
-        if bios[user].find('front page') > -1 or bios[user].find('get it to the front page') > -1 or bios[user].find('get this to the front page') > -1 or bios[user].find('screenshot this') > -1:     #searches found bios for keywords
+        if bios[user].find('front page') > -1 or bios[user].find('get it to the front page') > -1 or bios[user].find('get this to the front page') > -1 or bios[user].find('screenshot this') > -1 or bios[user].find('screencap') > -1 or bios[user].find('screen cap') > -1 or bios[user].find('screen shot') > -1:     #searches found bios for keywords
             print(user + ': \n' + bios[user] + '\n')
             print('-' * 100)
+    print(str(len(bios)) + ' bios found')
 
 
-if __name__ == '__main__':
+def update_UsersDict():
+    
+    global users
+    users = pickle.load(open('SaveData/saved-users.p', 'rb'))
+    
+    old = len(users)
+    
+    input_file = open('UsersDict.txt', 'r')
+    for line in input_file:
+        users.append(line.strip())
+    input_file.close()
+    
+    users = set(users)
+    
+    new = len(users)
+    
+    output_file = open('UsersDict.txt', 'w')  
+    for user in users:
+        output_file.write(user + '\n') 
+    output_file.close()
+    
+    print(str(new-old) + ' users added to the User Dictionary...How cool')
+    
+    
+    
+def delete_save_data():
+    os.remove("SaveData/saved-gallery.p")
+    os.remove("SaveData/saved-users.p")
+    os.remove("SaveData/last-image.p")
+
+
+def main():
+    
+    if not os.path.exists('SaveData'):
+        os.makedirs('SaveData')
+     
     print('Scanning started at: ' + str(datetime.now()))
-    for i in range(1,11):
-        scan()
+    for i in range(1,5):
+        gallery_scan()
+        user_scan()
         bio_scan()
         print('Finished scan ' + str(i) + ' at: ' + str(datetime.now()) + '\n')
-        #time.sleep(3600)
+        time.sleep(1800)
     print('Scanning finished at: ' + str(datetime.now()))
+     
+    browser.quit()
+    update_UsersDict()
+    delete_save_data()
+
+    
+    
+if __name__ == '__main__':
+    main()
+    
