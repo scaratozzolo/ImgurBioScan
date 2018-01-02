@@ -269,13 +269,13 @@ def main():
     for i in range(10):
         gallery_scan()
         user_scan()
-        bio_scan()
-        print_bios()    
+        bio_scan()   
         delete_save_data()
         print('Finished scan ' + str(i+1) + ' at: ' + str(datetime.now()) + '\n')
         time.sleep(1800)
     print('Scanning finished at: ' + str(datetime.now()))
     
+    print_bios() 
     browser.quit() #closes browser
     
      
