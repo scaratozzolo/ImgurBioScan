@@ -178,7 +178,7 @@ def bio_scan():
         pickle.dump(parsed_bios, open( "SaveData/parsed-bios.p", "wb" ))    #saves parsed_bios to file
         pickle.dump(bios, open( "SaveData/bios.p", "wb" ))                  #saves bios to file
             
-    print('\n' + str(num_pros) + ' total profiles parsed')
+    print('\n' + str(num_pros) + ' total profiles parsed \n')
     
     
 def print_bios():
@@ -220,7 +220,7 @@ def print_bios():
     pickle.dump(printed_fp_bios, open('SaveData/printed-fp-bios.p', 'wb'))
     pickle.dump(printed_nude_bios, open('SaveData/printed-nude-bios.p', 'wb'))          
     print(str(len(bios)) + ' bios found')
-    print(str(printed_bios) + ' bios printed, ' + str(fp) + ' front page bios printed, ' + str(nude) + ' nude bios printed')
+    print(str(printed_bios) + ' new bios printed, ' + str(fp) + ' front page bios printed, ' + str(nude) + ' nude bios printed')
 
 
 def update_UsersDict():
@@ -266,7 +266,7 @@ def main():
         os.makedirs('SaveData')
      
     print('Scanning started at: ' + str(datetime.now()))    #main program 
-    for i in range(1):
+    for i in range(10):
         gallery_scan()
         user_scan()
         bio_scan()
