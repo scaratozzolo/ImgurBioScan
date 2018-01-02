@@ -13,7 +13,6 @@ from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from pathlib import Path
-from lib2to3.fixer_util import is_list
 
 
 browser = webdriver.Chrome('chromedriver.exe')      #starts the chromedriver and opens the browser
@@ -66,31 +65,34 @@ def user_scan():
     SAVED_USERS_PATH = Path('SaveData/saved-users.p')   #default path for saved users file
     SAVED_LAST_IMAGE = Path('SaveData/last-image.p')    #default path for saved last image
     if SAVED_USERS_PATH.is_file():      #checks if saved user file exists
-        users = pickle.load(open('SaveData/saved-users.p', 'rb'))   #loads saved users to users
-        if SAVED_LAST_IMAGE.is_file():  #if there is a last image file, the user scan continues from that last file
-            last_image = pickle.load(open('SaveData/last-image.p', 'rb'))
-            if gallery.index(last_image) == len(gallery)-1: #if the last image is the last image of the whole gallery, prints how many saved users were loaded
-                print(str(len(users)) + ' saved users loaded')
-            else:   #if last image is not last image in saved gallery then it continues scanning for users from that last image
-                print(str(len(users)) + ' saved users loaded, picking up from where we left off...')
-                index = gallery.index(last_image)
-                num_images = len(gallery[:index])
-                for image in gallery[index:]:
-                    browser.get('https://www.imgur.com' + image)    #opens page in browser
-                    soup = BeautifulSoup(browser.page_source, 'lxml')
-                    
-                    for link in soup.find_all('a', {'class':'comment-username'}):   #get all users from image page
-                        text = link.get('href')
-                        users.append(text.strip())
-                    
-                    num_images += 1    
-                    if num_images % 100 == 0 and num_images != 0: #console loading stuff
-                        print('\n' + str(num_images) + '/' + str(len(gallery)) + ' images parsed at ' + str(datetime.now()))
-                    elif num_images % 10 == 0:
-                        print(" . ", end="")
-                    pickle.dump(image, open('SaveData/last-image.p', 'wb')) #save last image
-            
-                    pickle.dump(users, open('SaveData/saved-users.p', 'wb'))    #save users for that image
+        users = list(pickle.load(open('SaveData/saved-users.p', 'rb')))   #loads saved users to users
+    else:
+        users = []
+        
+    if SAVED_LAST_IMAGE.is_file():  #if there is a last image file, the user scan continues from that last file
+        last_image = pickle.load(open('SaveData/last-image.p', 'rb'))
+        if gallery.index(last_image) == len(gallery)-1: #if the last image is the last image of the whole gallery, prints how many saved users were loaded
+            print(str(len(users)) + ' saved users loaded')
+        else:   #if last image is not last image in saved gallery then it continues scanning for users from that last image
+            print(str(len(users)) + ' saved users loaded, picking up from where we left off...')
+            index = gallery.index(last_image)
+            num_images = len(gallery[:index])
+            for image in gallery[index:]:
+                browser.get('https://www.imgur.com' + image)    #opens page in browser
+                soup = BeautifulSoup(browser.page_source, 'lxml')
+                
+                for link in soup.find_all('a', {'class':'comment-username'}):   #get all users from image page
+                    text = link.get('href')
+                    users.append(text.strip())
+                
+                num_images += 1    
+                if num_images % 100 == 0 and num_images != 0: #console loading stuff
+                    print('\n' + str(num_images) + '/' + str(len(gallery)) + ' images parsed at ' + str(datetime.now()))
+                elif num_images % 10 == 0:
+                    print(" . ", end="")
+                pickle.dump(image, open('SaveData/last-image.p', 'wb')) #save last image
+        
+                pickle.dump(users, open('SaveData/saved-users.p', 'wb'))    #save users for that image
         
     else:
         num_images = 0
@@ -180,22 +182,45 @@ def bio_scan():
     
     
 def print_bios():
-    """Prints all bios with matching keywords to console"""
+    """Prints all bios with matching keywords to console and saves to bios.txt"""
     global bios
     
-    data = ''
-    output_file = open('bios.txt', 'w')
-    for user in bios:       #prints bio for every user found in dictionary
-        if bios[user].find('front page') > -1 or bios[user].find('get it to the front page') > -1 or bios[user].find('get this to the front page') > -1 or bios[user].find('screenshot this') > -1 or bios[user].find('screencap') > -1 or bios[user].find('screen cap') > -1 or bios[user].find('screen shot') > -1:     #searches found bios for keywords
-            txt = user + ': \n' + bios[user] + '\n' + '-' * 100
-            print(txt)
-            data += txt + '/n'
+    printed_fp_bios = {}
+    printed_nude_bios = {}
     
-    output_file.write(data) #saves bios to texst file
-    output_file.close()
+    SAVED_PRINTED_FP = Path('SaveData/printed-fp-bios.p')
+    SAVED_PRINTED_NUDE = Path('SaveData/printed-nude-bios.p')
+    
+    if SAVED_PRINTED_FP.is_file() and SAVED_PRINTED_NUDE.is_file():
+        printed_fp_bios = pickle.load(open('SaveData/printed-fp-bios.p', 'rb'))
+        printed_nude_bios = pickle.load(open('SaveData/printed-nude-bios.p', 'rb'))
+    
+    printed_bios = 0
+    fp = 0
+    nude = 0
+    for user in bios:       #prints bio for every user found in dictionary
+        
+        if bios[user].find('front page') > -1 or bios[user].find('get it to the front page') > -1 or bios[user].find('get this to the front page') > -1 \
+         or bios[user].find('screenshot this') > -1 or bios[user].find('screencap') > -1 or bios[user].find('screen cap') > -1 or bios[user].find('screen shot') > -1: #searches found bios for keywords
+            if not user in printed_fp_bios:
+                txt = user + ': \n' + bios[user] + '\n' + '-' * 100
+                print(txt)
+                printed_fp_bios[user] = txt
+                printed_bios += 1
+                fp += 1
             
-            
+        if bios[user].find('nudes') > -1 or bios[user].find('nudies') > -1 or bios[user].find('NSFW') > -1 or bios[user].find('boobs') > -1:     #searches found bios for keywords
+            if not user in printed_nude_bios:
+                txt = user + ': \n' + bios[user] + '\n' + '-' * 100
+                print(txt)
+                printed_nude_bios[user] = txt
+                printed_bios += 1
+                nude += 1
+           
+    pickle.dump(printed_fp_bios, open('SaveData/printed-fp-bios.p', 'wb'))
+    pickle.dump(printed_nude_bios, open('SaveData/printed-nude-bios.p', 'wb'))          
     print(str(len(bios)) + ' bios found')
+    print(str(printed_bios) + ' bios printed, ' + str(fp) + ' front page bios printed, ' + str(nude) + ' nude bios printed')
 
 
 def update_UsersDict():
@@ -204,22 +229,22 @@ def update_UsersDict():
     global users
     users = list(pickle.load(open('SaveData/saved-users.p', 'rb'))) #loads new users
     
-    old = len(users)
-    
     input_file = open('UsersDict.txt', 'r')
     
+    old = 0
     for line in input_file:         #adds old users to new users
         users.append(line.strip())
+        old += 1
     input_file.close()
     
     users = set(users)     #removes repeats
-    new = len(users)
-
+    new = 0
     
     output_file = open('UsersDict.txt', 'w')
     user_text = '' 
     for user in users:      #writes all users back to UserDict.txt
         user_text += user + '\n'
+        new += 1
     output_file.write(user_text) 
     output_file.close()
     
@@ -241,17 +266,18 @@ def main():
         os.makedirs('SaveData')
      
     print('Scanning started at: ' + str(datetime.now()))    #main program 
-    for i in range(1,3):
+    for i in range(1):
         gallery_scan()
         user_scan()
         bio_scan()
+        print_bios()    
         delete_save_data()
-        print('Finished scan ' + str(i) + ' at: ' + str(datetime.now()) + '\n')
+        print('Finished scan ' + str(i+1) + ' at: ' + str(datetime.now()) + '\n')
         time.sleep(1800)
     print('Scanning finished at: ' + str(datetime.now()))
     
     browser.quit() #closes browser
-    print_bios()    #prints bio
+    
      
     
 
