@@ -11,6 +11,6 @@ $ pip install selenium
 
 At the moment it scans the front page to get current gallery images and their uploaders. I'm afraid that when the Imgur front page comes out of beta this will no longer work, so for the time being it's also being used to create a dictionary of Imgur usernames.
 
-This took me approximately a few days to throw together, mostly due to learning how BeautifulSoup and Selenium works, along with PyQt5 in the previous version. My knowledge of python is limited at the moment. 
+This took me a few days to throw together, mostly due to learning how BeautifulSoup and Selenium works, along with PyQt5 in the previous version.
 
 Any questions or concerns feel free to contact me.
