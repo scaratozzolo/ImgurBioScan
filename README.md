@@ -15,7 +15,7 @@ This took me a few days to throw together, mostly due to learning how BeautifulS
 
 Any questions or concerns feel free to contact me.
 
-######TODO:   maybe
+###### TODO:   maybe
 - [x] Fix the number of users being added to UserDict print statement
 - [ ] Make inner function of user_scan it'sown function with a num_users arguument
 - [ ] Load pickle files at top of script to try and make them actually global because for some reason they're not?
