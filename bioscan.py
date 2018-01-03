@@ -264,6 +264,11 @@ def main():
     
     if not os.path.exists('SaveData'):      #checks for SaveData directory and creates it
         os.makedirs('SaveData')
+        
+    SAVED_USER_DICT = Path('UsersDict.txt')
+    if not SAVED_USER_DICT.is_file():
+        f = open('UsersDict.txt', 'w+')
+        f.close
      
     print('Scanning started at: ' + str(datetime.now()))    #main program 
     for i in range(10):
