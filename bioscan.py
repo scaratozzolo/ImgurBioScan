@@ -5,6 +5,7 @@ Created on Dec 29, 2017
 
 https://github.com/scaratozzolo/ImgurBioScan
 '''
+import sys
 import os
 import time
 import pickle
@@ -13,10 +14,172 @@ from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from pathlib import Path
+from builtins import int
+
+ 
+DEFAULT_SETTINGS = {'run_time_loop': 10, 'fp_loop': 10, 'sleep_time': 1800, 'only_new_bios': True, 'bio_keywords': ['front page', 'get it to the front page', 'get this to the front page', 'screen cap', 'screen shot', 'screencap', 'screenshot this'], 'version': 22}
+
+settings = {}
+
+def load_settings():
+    """Loads the setting of the program"""
+    global settings
+    
+    PATH_TO_SETTINGS = Path('SaveData/settings.p')
+    
+    if PATH_TO_SETTINGS.is_file():
+        settings = pickle.load(open('SaveData/settings.p', 'rb'))
+    else:
+        settings = DEFAULT_SETTINGS
+        print('Default settings loaded')
+        
+    if settings['version'] < 22:
+        print('Version out of date and incompatible. Newest version is v2.2')
+        
+    print('Current Settings: \n')
+    print('The program will run: ' + str(settings['run_time_loop']) + ' times\n')
+    print('The gallery scan will go to the bottom of the front page: ' + str(settings['fp_loop']) + ' times\n')
+    print('The program will wait: ' + str(settings['sleep_time']) + ' seconds between each new scan\n')
+    print('Program will only print new bios: ' + str(settings['only_new_bios']) + '\n')
+    print('The bio scan will look for these keywords: ', end='')
+    for keyword in settings['bio_keywords']:
+        if settings['bio_keywords'].index(keyword) == len(settings['bio_keywords'])-1:
+            print(keyword)
+        else:
+            print(keyword + ', ', end='')
+    
+    
+    while True:
+        cont = input('Would you like to run with these settings? Type r to reset settings to default. (y/n/r)\n')
+        if cont == 'y':
+            break
+        elif cont == 'n':
+            change_settings()
+            break
+        elif cont == 'r':
+            settings = DEFAULT_SETTINGS
+            print('Settings reset to default')
+            break
+        else:
+            print('Invalid Input')
+            
+
+
+def change_settings():
+    """Change the settings for the program"""
+    global settings
+    global same_keywords
+    
+    #change run_time_loop setting
+    while True:
+        print('How many times would you like the program to run? Current setting is: ' + str(settings['run_time_loop']) + ' times. Press enter to leave current setting.')
+        answer = input()
+        try:
+            if answer == '':
+                break
+            elif isinstance(int(answer), int):
+                if int(answer) <= 0:
+                    print('Please enter a positive whole number')
+                else:
+                    settings['run_time_loop'] = int(answer)
+                    print('Program will run: ' + str(settings['run_time_loop']) + ' times')
+                    break
+            else:
+                print('Please enter a positive whole number')
+        except Exception:
+            print('Please enter a positive whole number')
+            
+    #change fp_loop setting
+    while True:
+        print('How many times would you like the gallery scan to go to the bottom of the front page? Current setting is: ' + str(settings['fp_loop']) + ' times. Press enter to leave current setting.')
+        answer = input()
+        try:
+            if answer == '':
+                break
+            elif isinstance(int(answer), int):
+                if int(answer) <= 0:
+                    print('Please enter a positive whole number')
+                else:
+                    settings['fp_loop'] = int(answer)
+                    print('Gallery scan will go to bottom: ' + str(settings['fp_loop']) + ' times')
+                    break
+            else:
+                print('Please enter a positive whole number')
+        except Exception:
+            print('Please enter a positive whole number')
+            
+    #change sleep_time setting
+    while True:
+        print('How long do you want to program between each scan (in seconds)? Current setting is: ' + str(settings['sleep_time']) + ' seconds. Press enter to leave current setting.')
+        answer = input()
+        try:
+            if answer == '':
+                break
+            elif isinstance(int(answer), int):
+                if int(answer) <= 0:
+                    print('Please enter a positive whole number')
+                else:
+                    settings['sleep_time'] = int(answer)
+                    print('Program will wait: ' + str(settings['sleep_time']) + ' seconds')
+                    break
+            else:
+                print('Please enter a whole number')
+        except Exception:
+            print('Please enter a whole number')
+            
+            
+    #change only_new_bios setting
+    while True:
+        print('Do you want to only print new bios (y/n)? Current setting is: ' + str(settings['only_new_bios']) + ' . Press enter to leave current setting.')
+        answer = input()
+        try:
+            if answer == '':
+                break
+            elif answer == 'y':
+                settings['only_new_bios'] = True
+                print('Program will only print new bios')
+                break
+            elif answer == 'n':
+                settings['only_new_bios'] = False
+                print('Program will print all bios')
+                break
+            else:
+                print("Enter 'y' or 'n' or leave blank")
+        except Exception:
+            print("Enter 'y' or 'n' or leave blank")
+            
+    #change bio_keywords setting
+    keywords = []
+    while True:
+        print('What keywords do you want the program to search for? Current keywords are: ', end='')
+        for keyword in settings['bio_keywords']:
+            if settings['bio_keywords'].index(keyword) == len(settings['bio_keywords'])-1:
+                print(keyword + '. Press enter to leave current keywords or when finished. Press enter after each word or phrase')
+            else:
+                print(keyword + ', ', end='')
+        
+        answer = input()
+        if answer == '':
+            break
+        else:
+            keywords.append(answer)
+            while True:
+                answer = input()
+                if answer == '':
+                    break
+                else:
+                    keywords.append(answer)
+            
+            same_keywords = False
+            settings['bio_keywords'] = keywords
+            break
+        
+    pickle.dump(settings, open('SaveData/settings.p', 'wb'))
+        
+    
 
 
 browser = webdriver.Chrome('chromedriver.exe')      #starts the chromedriver and opens the browser
-
 
 gallery = []
 users = []
@@ -39,7 +202,7 @@ def gallery_scan():
     else:   #if no saved gallery is found, browser loads imgur and scrolls to bottom specified number of times, then gathers all gallery image links and stores them in the pickle file 
         browser.get('https://www.imgur.com')        
         elm = browser.find_element_by_tag_name('html')
-        for _ in range(10):
+        for _ in range(settings['fp_loop']):
             elm.send_keys(Keys.END)
             time.sleep(1)
         
@@ -61,6 +224,7 @@ def user_scan():
     print('User scan started at: ' + str(datetime.now()))
     
     global users
+    global gallery
     
     SAVED_USERS_PATH = Path('SaveData/saved-users.p')   #default path for saved users file
     SAVED_LAST_IMAGE = Path('SaveData/last-image.p')    #default path for saved last image
@@ -68,7 +232,7 @@ def user_scan():
         users = list(pickle.load(open('SaveData/saved-users.p', 'rb')))   #loads saved users to users
     else:
         users = []
-        
+
     if SAVED_LAST_IMAGE.is_file():  #if there is a last image file, the user scan continues from that last file
         last_image = pickle.load(open('SaveData/last-image.p', 'rb'))
         if gallery.index(last_image) == len(gallery)-1: #if the last image is the last image of the whole gallery, prints how many saved users were loaded
@@ -112,6 +276,8 @@ def user_scan():
             pickle.dump(image, open('SaveData/last-image.p', 'wb')) #save last image
     
             pickle.dump(users, open('SaveData/saved-users.p', 'wb'))    #save users for that image
+            
+    gallery = []
        
     repeat_users()
     update_UsersDict()
@@ -122,7 +288,7 @@ def repeat_users():
     
     global users
     
-    users = set(pickle.load(open('SaveData/saved-users.p', 'rb')))  #removes repeat users from the current list of users and saves it back into user file
+    users = list(set(pickle.load(open('SaveData/saved-users.p', 'rb'))))  #removes repeat users from the current list of users and saves it back into user file
     pickle.dump(users, open('SaveData/saved-users.p', 'wb'))
     
     print('All gone...')  
@@ -180,47 +346,47 @@ def bio_scan():
             
     print('\n' + str(num_pros) + ' total profiles parsed \n')
     
-    
+
+same_keywords = True
+
 def print_bios():
     """Prints all bios with matching keywords to console and saves to bios.txt"""
+    #For printed bios: printed bios with current keywords. save keywords to printed bios dictionary, check if theyre the same as current keywords, if not print everything
     global bios
     
-    printed_fp_bios = {}
-    printed_nude_bios = {}
+    printed_bios = {}
     
-    SAVED_PRINTED_FP = Path('SaveData/printed-fp-bios.p')
-    SAVED_PRINTED_NUDE = Path('SaveData/printed-nude-bios.p')
+    SAVED_PRINTED_BIOS = Path('SaveData/printed-bios.p')
     
-    if SAVED_PRINTED_FP.is_file() and SAVED_PRINTED_NUDE.is_file():
-        printed_fp_bios = pickle.load(open('SaveData/printed-fp-bios.p', 'rb'))
-        printed_nude_bios = pickle.load(open('SaveData/printed-nude-bios.p', 'rb'))
+    if SAVED_PRINTED_BIOS.is_file():
+        printed_bios = pickle.load(open('SaveData/printed-bios.p', 'rb'))
     
-    printed_bios = 0
-    fp = 0
-    nude = 0
-    for user in bios:       #prints bio for every user found in dictionary
-        
-        if bios[user].find('front page') > -1 or bios[user].find('get it to the front page') > -1 or bios[user].find('get this to the front page') > -1 \
-         or bios[user].find('screenshot this') > -1 or bios[user].find('screencap') > -1 or bios[user].find('screen cap') > -1 or bios[user].find('screen shot') > -1: #searches found bios for keywords
-            if not user in printed_fp_bios:
-                txt = user + ': \n' + bios[user] + '\n' + '-' * 100
-                print(txt)
-                printed_fp_bios[user] = txt
-                printed_bios += 1
-                fp += 1
-            
-        if bios[user].find('nudes') > -1 or bios[user].find('nudies') > -1 or bios[user].find('NSFW') > -1 or bios[user].find('boobs') > -1:     #searches found bios for keywords
-            if not user in printed_nude_bios:
-                txt = user + ': \n' + bios[user] + '\n' + '-' * 100
-                print(txt)
-                printed_nude_bios[user] = txt
-                printed_bios += 1
-                nude += 1
+                                            
+    printed = 0
+    
+    for user in bios:       #prints bio for every users
+        for keyword in settings['bio_keywords']:
+            if bios[user].find(keyword) > -1: #searches found bios for keywords
+                if settings['only_new_bios'] and same_keywords:
+                    if not user in printed_bios:
+                        txt = user + ': \n' + bios[user] + '\n' + '=' * 100
+                        print(txt)
+                        printed_bios[user] = 'Printed'
+                        printed += 1
+                else:
+                    txt = user + ': \n' + bios[user] + '\n' + '=' * 100
+                    print(txt)
+                    printed_bios[user] = 'Printed'
+                    printed += 1
+
            
-    pickle.dump(printed_fp_bios, open('SaveData/printed-fp-bios.p', 'wb'))
-    pickle.dump(printed_nude_bios, open('SaveData/printed-nude-bios.p', 'wb'))          
+    pickle.dump(printed_bios, open('SaveData/printed-bios.p', 'wb'))          
     print(str(len(bios)) + ' bios found')
-    print(str(printed_bios) + ' new bios printed, ' + str(fp) + ' front page bios printed, ' + str(nude) + ' nude bios printed')
+    
+    if settings['only_new_bios']:
+        print(str(printed) + ' new bios printed')
+    else:
+        print(str(printed) + ' bios printed')
 
 
 def update_UsersDict():
@@ -264,21 +430,25 @@ def main():
     
     if not os.path.exists('SaveData'):      #checks for SaveData directory and creates it
         os.makedirs('SaveData')
-        
+    
     SAVED_USER_DICT = Path('UsersDict.txt')
     if not SAVED_USER_DICT.is_file():
         f = open('UsersDict.txt', 'w+')
         f.close
+        
+    load_settings()
+    
      
     print('Scanning started at: ' + str(datetime.now()))    #main program 
-    for i in range(10):
+    for i in range(settings['run_time_loop']):
         gallery_scan()
         user_scan()
         bio_scan()   
         delete_save_data()
         print('Finished scan ' + str(i+1) + ' at: ' + str(datetime.now()) + '\n')
-        time.sleep(1800)
-    print('Scanning finished at: ' + str(datetime.now()))
+        time.sleep(settings['sleep_time'])
+    print('Scanning finished at: ' + str(datetime.now()) + '\n')
+    print('='*100)
     
     print_bios() 
     browser.quit() #closes browser
@@ -288,5 +458,11 @@ def main():
 
     
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        print('Program terminated early')
+        browser.quit()
+        
+
     
