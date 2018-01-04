@@ -18,8 +18,16 @@ from selenium.webdriver.common.keys import Keys
 from pathlib import Path
 from builtins import int
 
+print('''
+              ImgurBioScan 
+         by Scott Caratozzolo
+                v2.2.1
+    
+https://github.com/scaratozzolo/ImgurBioScan
+''')
+
 version = 221 
-DEFAULT_SETTINGS = {'run_time_loop': 10, 'fp_loop': 10, 'sleep_time': 1800, 'only_new_bios': True, 'bio_keywords': ['front page', 'get it to the front page', 'get this to the front page', 'screen cap', 'screen shot', 'screencap', 'screenshot this'], 'version': version}
+DEFAULT_SETTINGS = {'run_time_loop': 10, 'fp_loop': 10, 'sleep_time': 3600, 'only_new_bios': True, 'bio_keywords': ['front page', 'get it to the front page', 'get this to the front page', 'screen cap', 'screen shot', 'screencap', 'screenshot this'], 'version': version}
 
 settings = {}
 
@@ -32,11 +40,11 @@ def load_settings():
     if PATH_TO_SETTINGS.is_file():
         settings = pickle.load(open('SaveData/settings.p', 'rb'))
         if settings['version'] < 220:
-            print('Version out of date and incompatible. Newest version is v2.2.1. Download at https://github.com/scaratozzolo/ImgurBioScan')
+            print("Version incompatible. Save data won't work")
             browser.quit()
             sys.exit()
         elif settings['version'] < version:
-            print('New version available. Download at https://github.com/scaratozzolo/ImgurBioScan')
+            settings['version'] = version
     else:
         settings = DEFAULT_SETTINGS
         print('Default settings loaded')
