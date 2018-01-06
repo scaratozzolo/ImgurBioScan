@@ -20,4 +20,4 @@ Any questions or concerns feel free to contact me.
 - [ ] Make inner function of user_scan it'sown function with a num_users arguument
 - [ ] Load pickle files at top of script to try and make them actually global because for some reason they're not?
 - [x] Save found bios to pickle to compare if they've been printed before, only print new found bios
-- [ ] settings and options?
+- [x] settings and options?
