@@ -3,7 +3,7 @@ Created on Dec 29, 2017
 
 @author: Scott Caratozzolo
 
-@version: 2.2.1
+@version: 2.2.2
 
 https://github.com/scaratozzolo/ImgurBioScan
 '''
@@ -21,12 +21,14 @@ from builtins import int
 print('''
               ImgurBioScan 
          by Scott Caratozzolo
-                v2.2.1
+                v2.2.2
     
 https://github.com/scaratozzolo/ImgurBioScan
 ''')
 
-version = 221 
+browser = webdriver.Chrome('chromedriver.exe')      #starts the chromedriver and opens the browser
+
+version = 222 
 DEFAULT_SETTINGS = {'run_time_loop': 10, 'fp_loop': 10, 'sleep_time': 3600, 'only_new_bios': True, 'bio_keywords': ['front page', 'get it to the front page', 'get this to the front page', 'screen cap', 'screen shot', 'screencap', 'screenshot this'], 'version': version}
 
 settings = {}
@@ -48,6 +50,7 @@ def load_settings():
     else:
         settings = DEFAULT_SETTINGS
         print('Default settings loaded')
+        pickle.dump(settings, open('SaveData/settings.p', 'wb'))
         
         
         
@@ -65,7 +68,7 @@ def load_settings():
     
     
     while True:
-        cont = input('Would you like to run with these settings? Type r to reset settings to default. (y/n/r)\n')
+        cont = input('\nWould you like to run with these settings? Type r to reset settings to default. (y/n/r)\n')
         if cont == 'y':
             break
         elif cont == 'n':
@@ -192,9 +195,22 @@ def change_settings():
     pickle.dump(settings, open('SaveData/settings.p', 'wb'))
         
     
+def check_save_data():
+    
+    if os.path.isfile('SaveData/saved-gallery.p') or os.path.isfile('SaveData/saved-users.p') or os.path.isfile('SaveData/last-image.p'):
+        print('Save data found. Would you like to load it? (y/n)')
+        
+        while True:
+            answer = input()
+            if answer == 'y':
+                break
+            elif answer == 'n':
+                delete_save_data()
+                break
+            else:
+                print('Invalid Input')
 
 
-browser = webdriver.Chrome('chromedriver.exe')      #starts the chromedriver and opens the browser
 
 gallery = []
 users = []
@@ -329,8 +345,8 @@ def bio_scan():
     SAVE_BIOS_PATH = Path("SaveData/bios.p")        #path object to saved bios
     SAVE_PARSED_BIOS = Path("SaveData/bios.p")      #path object to saved parsed_bios
     if SAVE_BIOS_PATH.is_file() and SAVE_PARSED_BIOS.is_file(): #if both paths are files then they are saved to variables
-        parsed_bios = pickle.load(open( "SaveData/parsed-bios.p", "rb" ))
-        bios = pickle.load(open( "SaveData/bios.p", "rb" ))
+        parsed_bios = pickle.load(open("SaveData/parsed-bios.p", "rb" ))
+        bios = pickle.load(open("SaveData/bios.p", "rb" ))
         print('Picking up from where we left off...')
         num_pros = len(parsed_bios)
     
@@ -452,6 +468,7 @@ def main():
         f.close
         
     load_settings()
+    check_save_data()
     
      
     print('Scanning started at: ' + str(datetime.now()))    #main program 
@@ -461,7 +478,8 @@ def main():
         bio_scan()   
         delete_save_data()
         print('Finished scan ' + str(i+1) + ' at: ' + str(datetime.now()) + '\n')
-        time.sleep(settings['sleep_time'])
+        if i > 1:
+            time.sleep(settings['sleep_time'])
     print('Scanning finished at: ' + str(datetime.now()) + '\n')
     print('='*100)
     
@@ -477,6 +495,9 @@ if __name__ == '__main__':
         main()
     except KeyboardInterrupt:
         print('Program terminated early')
+        browser.quit()
+    except Exception as e:
+        print(str(e))
         browser.quit()
         
 
