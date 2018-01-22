@@ -5,6 +5,7 @@ The program uses BeautifulSoup4 to help with scraping webpages and Selenium to l
 
 To install them:
 ```
+$ pip install requests
 $ pip install beautifulsoup4
 $ pip install selenium
 ```
