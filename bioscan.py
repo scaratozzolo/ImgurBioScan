@@ -59,11 +59,11 @@ def load_settings():
         
         
     if version < 220:
-        print("Version incompatible. Save data won't work. Please download latest version, {} \n https://github.com/scaratozzolo/ImgurBioScan/releases/tag/{}".format(version_readable, latest_version))
+        print("Version incompatible. Save data won't work. Please download latest version, {} \n https://github.com/scaratozzolo/ImgurBioScan/releases/tag/{}".format(version_readable, version_readable))
         browser.quit()
         sys.exit()
     elif int(latest_version) > version:
-        print("New version available. Latest version is {} \n https://github.com/scaratozzolo/ImgurBioScan/releases/tag/{}".format(version_readable, latest_version))
+        print("New version available. Latest version is {} \n https://github.com/scaratozzolo/ImgurBioScan/releases/tag/{}".format(version_readable, version_readable))
         print()
     elif settings['version'] < version:
         settings['version'] = version
