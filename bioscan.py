@@ -3,7 +3,7 @@ Created on Dec 29, 2017
 
 @author: Scott Caratozzolo
 
-@version: 2.2.2
+@version: 2.2.3
 
 https://github.com/scaratozzolo/ImgurBioScan
 '''
@@ -11,6 +11,8 @@ import sys
 import os
 import time
 import pickle
+import requests
+import json
 from datetime import datetime
 from bs4 import BeautifulSoup
 from selenium import webdriver
@@ -18,17 +20,26 @@ from selenium.webdriver.common.keys import Keys
 from pathlib import Path
 from builtins import int
 
+#change version from numbers to strings and test strings
+
 print('''
               ImgurBioScan 
          by Scott Caratozzolo
-                v2.2.2
+                v2.2.3
     
 https://github.com/scaratozzolo/ImgurBioScan
 ''')
 
 browser = webdriver.Chrome('chromedriver.exe')      #starts the chromedriver and opens the browser
 
-version = 222 
+r = requests.get("https://scaratozzolo.github.io/ImgurBioScan/version.json")
+version_control = json.loads(r.content)
+
+latest_version = version_control['version_number']
+version_name = version_control['version_name']
+version_readable = version_control['version']
+
+version = 223
 DEFAULT_SETTINGS = {'run_time_loop': 10, 'fp_loop': 10, 'sleep_time': 3600, 'only_new_bios': True, 'bio_keywords': ['front page', 'get it to the front page', 'get this to the front page', 'screen cap', 'screen shot', 'screencap', 'screenshot this'], 'version': version}
 
 settings = {}
@@ -41,17 +52,22 @@ def load_settings():
     
     if PATH_TO_SETTINGS.is_file():
         settings = pickle.load(open('SaveData/settings.p', 'rb'))
-        if settings['version'] < 220:
-            print("Version incompatible. Save data won't work")
-            browser.quit()
-            sys.exit()
-        elif settings['version'] < version:
-            settings['version'] = version
     else:
         settings = DEFAULT_SETTINGS
         print('Default settings loaded')
         pickle.dump(settings, open('SaveData/settings.p', 'wb'))
         
+        
+    if version < 220:
+        print("Version incompatible. Save data won't work. Please download latest version, {} \n https://github.com/scaratozzolo/ImgurBioScan/releases/tag/{}".format(version_readable, latest_version))
+        browser.quit()
+        sys.exit()
+    elif int(latest_version) > version:
+        print("New version available. Latest version is {} \n https://github.com/scaratozzolo/ImgurBioScan/releases/tag/{}".format(version_readable, latest_version))
+        print()
+    elif settings['version'] < version:
+        settings['version'] = version
+    
         
         
     print('Current Settings: \n')
